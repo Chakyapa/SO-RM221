@@ -1,1 +1,1 @@
-# SO
+# Gutu Corneliu & Nistrean Daniel
