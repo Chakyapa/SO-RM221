@@ -3,22 +3,63 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-
-<VBox alignment="CENTER" prefHeight="498.0" prefWidth="547.0" spacing="20.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.solab1.Controller">
+<VBox alignment="CENTER" prefHeight="500.0" prefWidth="550.0" spacing="20.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.solab1.Controller">
     <padding>
         <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
     </padding>
-   <AnchorPane prefHeight="451.0" prefWidth="507.0">
-      <children>
-      
-                <Label fx:id="temperature" layoutX="14.0" layoutY="14.0" />
-         <Label fx:id="humidity" layoutX="15.0" layoutY="50.0" />
-         <Label fx:id="precipitation" layoutX="15.0" layoutY="79.0" />
-          <Button layoutX="233.0" layoutY="269.0" onAction="#onHelloButtonClick" text="Start" />
-         <Label fx:id="water" layoutX="243.0" layoutY="327.0" />
-      </children>
-   </AnchorPane>
+
+    <!-- Secțiunea de date meteo -->
+    <VBox prefHeight="130.0" prefWidth="179.0" spacing="10.0" style="-fx-background-color: #f0f0f0; -fx-padding: 10; -fx-border-radius: 5; -fx-border-color: #cccccc;">
+        <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Date Meteo" />
+      <HBox prefHeight="100.0" prefWidth="200.0">
+         <children>
+              <Label text="Temperatura: " />
+            <Label fx:id="temperature" translateX="10.0" />
+         </children>
+      </HBox>
+      <HBox prefHeight="100.0" prefWidth="200.0">
+         <children>
+              <Label text="Umiditate: " />
+            <Label fx:id="humidity" translateX="10.0" />
+         </children>
+      </HBox>
+      <HBox prefHeight="100.0" prefWidth="200.0">
+         <children>
+              <Label text="Precipitații: " />
+            <Label fx:id="precipitation" translateX="10.0" />
+         </children>
+      </HBox>
+    </VBox>
+
+    <!-- Secțiunea de consum apă -->
+    <VBox spacing="10.0" style="-fx-background-color: #e0f7fa; -fx-padding: 10; -fx-border-radius: 5; -fx-border-color: #0097a7;">
+        <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Consumul de Apă" />
+        <HBox spacing="10.0">
+            <Label text="Setează cantitatea (ml):" />
+            <TextField fx:id="waterInput" prefWidth="80" />
+        </HBox>
+        <Button onAction="#onAddWater" text="Adaugă" />
+      <HBox prefHeight="6.0" prefWidth="487.0">
+         <children>
+              <Label fx:id="water" style="-fx-font-size: 14px;" text="Ai băut:" />
+            <Label translateX="10.0" />
+         </children>
+      </HBox>
+    </VBox>
+
+    <!-- Secțiunea de notificări -->
+    <VBox spacing="10.0" style="-fx-background-color: #fff3e0; -fx-padding: 10; -fx-border-radius: 5; -fx-border-color: #ff9800;">
+        <Label style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Setări Notificări" />
+        <HBox spacing="10.0">
+            <Label text="Introduceti ora: " />
+         <Spinner fx:id="hourSpinner" prefHeight="25.0" prefWidth="60.0" />
+         <Spinner fx:id="minuteSpinner" prefHeight="25.0" prefWidth="60.0" />
+        </HBox>
+        <Button onAction="#onSetReminder" text="Setează Notificare" />
+    </VBox>
 </VBox>
