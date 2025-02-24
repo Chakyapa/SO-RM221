@@ -80,8 +80,9 @@ class Balls extends JPanel {
     private int selectedBall = -1;
     private int score = 0;
     private boolean gameOver = false;
+    TimerTask task;
     public Balls(){
-        startTimer();
+        globalStartTimer();
     }
     @Override
     protected void paintComponent(Graphics g) {
@@ -140,6 +141,7 @@ class Balls extends JPanel {
 
     public void incrementScore(int amount) {
         score += amount;
+        resetScoreTimer();
         repaint();
     }
 
@@ -147,7 +149,7 @@ class Balls extends JPanel {
         score = 0;
         repaint();
     }
-    private void startTimer() {
+    private void globalStartTimer() {
 
         Date date = new Date();
         int delayGameOver= 5 * 60 * 1000;
@@ -166,5 +168,19 @@ class Balls extends JPanel {
                            }
                        },
                 date);
+    }
+    public void resetScoreTimer(){
+        if (task != null) {
+            task.cancel();
+        }
+        Timer timer = new Timer(true);
+        task=new TimerTask() {
+            @Override
+            public void run() {
+                resetScore();
+            }
+        };
+
+        timer.schedule(task, 3000);
     }
 }
