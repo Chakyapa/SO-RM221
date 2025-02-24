@@ -1,9 +1,14 @@
 import java.util.TimerTask;
 
-public class SecondTimerTask extends TimerTask {
+class SecondTimerTask extends TimerTask {
+    final private ProductivityTimerApplication productivityTimerApplication;
+
+    public SecondTimerTask(ProductivityTimerApplication productivityTimerApplication) {
+        this.productivityTimerApplication = productivityTimerApplication;
+    }
 
     @Override
     public void run() {
-
+        productivityTimerApplication.decrementSeconds();
     }
 }

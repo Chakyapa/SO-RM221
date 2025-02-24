@@ -1,9 +1,14 @@
 import java.util.TimerTask;
 
-public class HoursTimerTask extends TimerTask {
+class HourTimerTask extends TimerTask {
+    final private ProductivityTimerApplication productivityTimerApplication;
+
+    public HourTimerTask(ProductivityTimerApplication productivityTimerApplication) {
+        this.productivityTimerApplication = productivityTimerApplication;
+    }
 
     @Override
     public void run() {
-
+        productivityTimerApplication.decrementHours();
     }
 }
