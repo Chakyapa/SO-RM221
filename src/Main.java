@@ -6,6 +6,7 @@ import java.time.LocalTime;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.Date;
 
 public class Main {
     public static void main(String[] args) {
@@ -147,18 +148,23 @@ class Balls extends JPanel {
         repaint();
     }
     private void startTimer() {
-        LocalTime startTime = LocalTime.now(); // Запоминаем время старта
-        System.out.println("Таймер запущен в: " + startTime); // Вывод в консоль
+
+        Date date = new Date();
+        int delayGameOver= 5 * 60 * 1000;
+        date.setTime(date.getTime()+delayGameOver);
+
+
 
         Timer timer = new Timer();
         timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                LocalTime endTime = LocalTime.now(); // Фиксируем время окончания
-                System.out.println("Игра окончена в: " + endTime); // Выводим время окончания
-                gameOver=true;
-                repaint();
-            }
-        }, 5 * 60 * 1000); // 5 минут в миллисекундах
+                           @Override
+                           public void run() {
+                               LocalTime endTime = LocalTime.now(); // Фиксируем время окончания
+                               System.out.println("Игра окончена в: " + endTime); // Выводим время окончания
+                               gameOver=true;
+                               repaint();
+                           }
+                       },
+                date);
     }
 }
