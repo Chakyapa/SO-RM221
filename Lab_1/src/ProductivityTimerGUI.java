@@ -11,7 +11,7 @@ import java.io.File;
 public class ProductivityTimerGUI extends JPanel{
 
     // путь к звуковой дорожке, которая звучит при окончании таймера
-    static final String END_SOUND_PATH = "C:/Users/innak/Desktop/tum/3curs/2sem/SO/SO-RM221/sound.wav";
+    static final String END_SOUND_PATH = "C:/Users/innak/Desktop/tum/3curs/2sem/SO/SO-RM221/Lab_1/sound.wav";
 
     // размеры окна приложения
     static final int WINDOW_WIDTH = 800;
