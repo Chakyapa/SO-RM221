@@ -165,8 +165,9 @@ class Balls extends JPanel {
                                LocalTime endTime = LocalTime.now(); // Фиксируем время окончания
                                System.out.println("Игра окончена в: " + endTime); // Выводим время окончания
                                gameOver=true;
-                               repaint();
                                timer.purge();
+                               repaint();
+
                            }
                        },
                 date);
