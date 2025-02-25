@@ -1,3 +1,4 @@
+import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
 import javax.sound.sampled.LineEvent;
@@ -119,7 +120,6 @@ public class ProductivityTimerGUI extends JPanel{
             if (seconds < 0 || seconds > 59) {
                 throw new NumberFormatException();
             }
-            throw new NumberFormatException();
 
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this, "Введите корректное время!");
