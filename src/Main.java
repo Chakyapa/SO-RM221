@@ -10,11 +10,11 @@ import java.util.Date;
 
 public class Main {
     public static void main(String[] args) {
-        boolean startCount = false;
+
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("лабораторная");
+            JFrame frame = new JFrame("лабораторная 1");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.setSize(400, 300);
+            frame.setSize(500, 400);
 
             Balls ballsPanel = new Balls();
             frame.add(ballsPanel);
@@ -55,7 +55,7 @@ public class Main {
 
 
                             break;
-                        case KeyEvent.VK_SPACE:
+                        case KeyEvent.VK_SPACE: //Сброс очков нажатием на пробел
                             ballsPanel.resetScore();
                             break;
                     }
@@ -67,6 +67,7 @@ public class Main {
                 @Override
                 public void run() {
                     ballsPanel.selectBall(new Random().nextInt(4));
+
                 }
             }, 0, 1000);
 
@@ -80,9 +81,9 @@ class Balls extends JPanel {
     private int selectedBall = -1;
     private int score = 0;
     private boolean gameOver = false;
-    TimerTask task;
+    private TimerTask task;
     public Balls(){
-        globalStartTimer();
+        globalStopTimer();
     }
     @Override
     protected void paintComponent(Graphics g) {
@@ -94,14 +95,14 @@ class Balls extends JPanel {
     private void drawBalls(Graphics g) {
         int cordX = getWidth() / 2;
         int cordY = getHeight() / 2;
-        int diam = 50;
-        int razn = 60;
+        int diam = 70;
+        int razn = 80;
 
 
         int[][] positions = {
                 {cordX - razn, cordY},    // Лево
-                {cordX + razn, cordY},    // Право
-                {cordX, cordY - razn},    // Верх
+                {cordX + razn, cordY},    // право
+                {cordX, cordY - razn},    // вверх
                 {cordX, cordY + razn}     // Низ
         };
 
@@ -149,7 +150,7 @@ class Balls extends JPanel {
         score = 0;
         repaint();
     }
-    private void globalStartTimer() {
+    private void globalStopTimer() {
 
         Date date = new Date();
         int delayGameOver= 5 * 60 * 1000;
@@ -165,6 +166,7 @@ class Balls extends JPanel {
                                System.out.println("Игра окончена в: " + endTime); // Выводим время окончания
                                gameOver=true;
                                repaint();
+                               timer.purge();
                            }
                        },
                 date);
@@ -172,12 +174,15 @@ class Balls extends JPanel {
     public void resetScoreTimer(){
         if (task != null) {
             task.cancel();
+
         }
+
         Timer timer = new Timer(true);
         task=new TimerTask() {
             @Override
             public void run() {
                 resetScore();
+                timer.purge();
             }
         };
 
