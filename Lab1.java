@@ -55,6 +55,7 @@ public class Lab1 extends JPanel {
             System.out.println("IntervalTask: Se execută la fiecare 3 secunde. [" + new Date() + "]");
         }
     }
+    
 
     static class SpecificTimer extends TimerTask {
         @Override
