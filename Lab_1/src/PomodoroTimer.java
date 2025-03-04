@@ -115,8 +115,9 @@ public class PomodoroTimer {
                     updateLabel();
                 } else {
                     timer.cancel();
-                    workMode = !workMode;
-                    startPomodoro();
+                    isRunning = false;
+                    workMode = false;
+                    startShortBreak();
                 }
             }
         };
@@ -130,11 +131,34 @@ public class PomodoroTimer {
         }
     }
 
+
     private void resetPomodoro() {
         stopPomodoro();
         workMode = true;
         isRunning = false;
         remainingTime = pomodoroTime;
         updateLabel();
+    }
+
+    private void startShortBreak() {
+        workMode = false;
+        remainingTime = shortBreakTime;
+        endTime = System.currentTimeMillis() + (remainingTime * 1000);
+
+        timer = new Timer();
+        task = new TimerTask() {
+            @Override
+            public void run() {
+                remainingTime = (endTime - System.currentTimeMillis()) / 1000;
+                if (remainingTime > 0) {
+                    updateLabel();
+                } else {
+                    timer.cancel();
+                    isRunning = false;
+                    resetPomodoro();
+                }
+            }
+        };
+        timer.scheduleAtFixedRate(task, 0, 1000);
     }
 }
