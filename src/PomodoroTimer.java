@@ -81,6 +81,7 @@ public class PomodoroTimer {
             public void windowClosing(java.awt.event.WindowEvent windowEvent) {
                 if (timer != null) {
                     timer.cancel();
+                    System.out.println("The Purge value:" + timer.purge());
                 }
             }
         });
@@ -136,6 +137,7 @@ public class PomodoroTimer {
                     updateLabel();
                 } else {
                     timer.cancel();
+                    System.out.println("The Purge value:" + timer.purge());
                     isRunning = false;
                     workMode = false;
                     startShortBreak();
@@ -148,6 +150,7 @@ public class PomodoroTimer {
     private void stopPomodoro() {
         if (timer != null) {
             timer.cancel();
+            System.out.println("The Purge value:" + timer.purge());
             isRunning = false;
         }
     }
@@ -174,6 +177,7 @@ public class PomodoroTimer {
                     updateLabel();
                 } else {
                     timer.cancel();
+                    System.out.println("The Purge value:" + timer.purge());
                     isRunning = false;
                     resetPomodoro();
                 }
@@ -182,7 +186,16 @@ public class PomodoroTimer {
         timer.scheduleAtFixedRate(task, 0, 1000);
     }
 
+    private Timer timer1;
+    private TimerTask lunchTask;
+
     private void scheduleLunchNotification() {
+        if (lunchTask != null) {
+            lunchTask.cancel();
+        }
+        if (timer1 != null) {
+            System.out.println("The Purge value:" + timer1.purge());
+        }
         Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.HOUR_OF_DAY, 11);
         calendar.set(Calendar.MINUTE, 40);
