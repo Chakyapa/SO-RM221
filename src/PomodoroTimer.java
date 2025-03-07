@@ -185,7 +185,7 @@ public class PomodoroTimer {
     private void scheduleLunchNotification() {
         Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.HOUR_OF_DAY, 11);
-        calendar.set(Calendar.MINUTE, 24);
+        calendar.set(Calendar.MINUTE, 40);
         calendar.set(Calendar.SECOND, 0);
         Date date = calendar.getTime();
 
