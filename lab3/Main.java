@@ -36,6 +36,24 @@ class Philosopher extends Thread {
         Thread.sleep((int) (Math.random() * 100));
     }
 
+     @Override
+    public void run() {
+        try {
+            for (int i = 0; i < cycles; i++) {
+                think();
+                if (leftFork.pickUp()) {
+                    if (rightFork.pickUp()) {
+                        eat();
+                        rightFork.putDown();
+                    }
+                    leftFork.putDown();
+                }
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
 }
 
 public class main {
@@ -45,4 +63,28 @@ public class main {
         Fork[] forks = new Fork[N];
         Philosopher[] philosophers = new Philosopher[N];
     }
+
+    for (int i = 0; i < N; i++) {
+            forks[i] = new Fork();
+        }
+
+        for (int i = 0; i < N; i++) {
+            Fork leftFork = forks[i];
+            Fork rightFork = forks[(i + 1) % N];
+
+            if (i == N - 1) { // Evităm blocajul luând furculițele într-o ordine diferită
+                philosophers[i] = new Philosopher(i, rightFork, leftFork, cycles);
+            } else {
+                philosophers[i] = new Philosopher(i, leftFork, rightFork, cycles);
+            }
+            philosophers[i].start();
+        }
+
+        for (Philosopher philosopher : philosophers) {
+            try {
+                philosopher.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
 }
