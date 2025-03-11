@@ -13,7 +13,7 @@ import java.util.TimerTask;
 
 public class HelloController {
 
-    
+
     @FXML
     private Label label;
     @FXML// Метка из FXML
