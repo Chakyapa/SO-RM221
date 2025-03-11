@@ -2,6 +2,10 @@ import java.util.ArrayList;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+class Reader extends Thread {
+
+}
+
 class Library {
     static int books;
     Writer[] writers;

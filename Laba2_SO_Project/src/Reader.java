@@ -1,3 +1,0 @@
-class Reader extends Thread {
-
-}
