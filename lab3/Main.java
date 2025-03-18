@@ -17,54 +17,56 @@ class Philosopher extends Thread {
     private final int id;
     private final Fork leftFork;
     private final Fork rightFork;
-    private final int cycles;
+    private final int totalCycles;
+    private int remainingCycles;
 
-    public Philosopher(int id, Fork leftFork, Fork rightFork, int cycles) {
+    public Philosopher(int id, Fork leftFork, Fork rightFork, int totalCycles) {
         this.id = id;
         this.leftFork = leftFork;
         this.rightFork = rightFork;
-        this.cycles = cycles;
+        this.totalCycles = totalCycles;
+        this.remainingCycles = totalCycles;
     }
 
     private void think() throws InterruptedException {
-        System.out.println("Philosopher " + id + " is thinking.");
+        System.out.println("Philosopher " + id + " is thinking ");
         Thread.sleep((int) (Math.random() * 100));
     }
 
     private void eat() throws InterruptedException {
-        System.out.println("Philosopher " + id + " is eating.");
+        System.out.println("Philosopher " + id + " is eating. Remaining cycles: " + remainingCycles);
         Thread.sleep((int) (Math.random() * 100));
     }
 
-     @Override
+    @Override
     public void run() {
         try {
-            for (int i = 0; i < cycles; i++) {
+            while (remainingCycles > 0) {
                 think();
                 if (leftFork.pickUp()) {
                     if (rightFork.pickUp()) {
                         eat();
+                        remainingCycles--;
                         rightFork.putDown();
                     }
                     leftFork.putDown();
                 }
             }
+            System.out.println("Philosopher " + id + " has finished all cycles.");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
     }
-
 }
 
-public class main {
+public class Main {
     public static void main(String[] args) {
         int N = 5;
         int cycles = 10;
         Fork[] forks = new Fork[N];
         Philosopher[] philosophers = new Philosopher[N];
-    }
 
-    for (int i = 0; i < N; i++) {
+        for (int i = 0; i < N; i++) {
             forks[i] = new Fork();
         }
 
@@ -72,7 +74,7 @@ public class main {
             Fork leftFork = forks[i];
             Fork rightFork = forks[(i + 1) % N];
 
-            if (i == N - 1) { // Evităm blocajul luând furculițele într-o ordine diferită
+            if (i == N - 1) {
                 philosophers[i] = new Philosopher(i, rightFork, leftFork, cycles);
             } else {
                 philosophers[i] = new Philosopher(i, leftFork, rightFork, cycles);
@@ -87,4 +89,7 @@ public class main {
                 Thread.currentThread().interrupt();
             }
         }
+
+        System.out.println("All philosophers have finished their cycles.");
+    }
 }
