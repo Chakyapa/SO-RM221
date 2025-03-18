@@ -2,6 +2,7 @@ import java.util.concurrent.CountDownLatch;
 
 public class Main {
     public static void main(String[] args) throws Exception {
+
         int numWriters = Config.WRITERS_NUM;
         int numReaders = Config.READERS_NUM;
 
