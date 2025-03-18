@@ -39,6 +39,8 @@ public class Reader extends Thread {
                         bookCount++;
                     }
                     else {
+                        System.out.println(getName() + ": No book found");
+                        gui.logMessage(getName() + ": No book found");
                         Library.readLock.unlock();
                         break;
                     }
