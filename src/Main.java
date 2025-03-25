@@ -134,6 +134,7 @@ class Balls extends JPanel {
             selectedBall = index;
             repaint();
 
+
     }
 
     public int getSelectedBall() {
