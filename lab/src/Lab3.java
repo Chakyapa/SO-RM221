@@ -3,6 +3,7 @@ import java.awt.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
@@ -14,10 +15,10 @@ public class Lab3 {
     private static final Lock consoleLock = new ReentrantLock();
     private static JTextArea textArea;
     private static ExecutorService executor;
+    private static final AtomicInteger filosofiTerminati = new AtomicInteger(0);
 
     public static void main(String[] args) {
-        // Create Swing components
-        JFrame frame = new JFrame("Dining Philosophers");
+        JFrame frame = new JFrame("Dining Philosophers - Eat 3 Times Each");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(600, 400);
         frame.setLayout(new BorderLayout());
@@ -35,7 +36,6 @@ public class Lab3 {
         frame.add(panel, BorderLayout.SOUTH);
 
         startButton.addActionListener(e -> startSimulation());
-        stopButton.addActionListener(e -> stopSimulation());
 
         frame.setVisible(true);
     }
@@ -49,25 +49,13 @@ public class Lab3 {
         }
     }
 
-    private static void stopSimulation() {
-        for (Filosof filosof : filosofi) {
-            if (filosof != null) {
-                filosof.opreste();
-            }
-        }
-        if (executor != null) {
-            executor.shutdownNow();
-            executor.shutdown();
-        }
-    }
-
     static class Betisoare {
         private static Betisoare instance;
         private final Semaphore[] betisoare;
 
         private Betisoare(int n) {
             if (n <= 0) {
-                throw new IllegalArgumentException("Numărul de betisoare trebuie să fie pozitiv.");
+                throw new IllegalArgumentException("Numărul de bețișoare trebuie să fie pozitiv.");
             }
             betisoare = new Semaphore[n];
             for (int i = 0; i < n; i++) {
@@ -116,25 +104,28 @@ public class Lab3 {
     static class Filosof implements Runnable {
         private final int id;
         private final Betisoare betisoare;
-        private volatile boolean continua = true;
+        private int mancariRamase = 3;
 
         public Filosof(int id, Betisoare betisoare) {
             this.id = id;
             this.betisoare = betisoare;
         }
 
-        public void opreste() {
-            continua = false;
-        }
-
         @Override
         public void run() {
             try {
-                while (continua) {
+                while (mancariRamase > 0) {
                     actiune(Actiune.GANDESTE);
                     betisoare.iaBetisoare(id);
                     actiune(Actiune.MANANCA);
                     betisoare.lasaBetisoare(id);
+                    mancariRamase--;
+                    printMessage("Filozoful " + id + " a mai rămas cu " + mancariRamase + " mese.");
+                }
+                printMessage("Filozoful " + id + " a terminat de mâncat de 3 ori.");
+                if (filosofiTerminati.incrementAndGet() == NUMAR_FILOZOFI) {
+                    printMessage("Toți filozofii au terminat. Oprire executor.");
+                    executor.shutdown();
                 }
             } catch (InterruptedException e) {
                 printMessage("Filozoful " + id + " a fost întrerupt.");
