@@ -1,6 +1,9 @@
+import javax.swing.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.*;
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
 
 class Library {
     static List<String> books = new ArrayList<>();
@@ -12,10 +15,12 @@ class Library {
 class Writer extends Thread {
     String name;
     int booksToWrite;
+    JTextArea outputArea;
 
-    public Writer(String name, int booksToWrite) {
+    public Writer(String name, int booksToWrite, JTextArea outputArea) {
         this.name = name;
         this.booksToWrite = booksToWrite;
+        this.outputArea = outputArea;
     }
 
     @Override
@@ -25,7 +30,7 @@ class Writer extends Thread {
                 Library.writeLock.lock(); // Писатель блокирует writeLock чтобы записывать книгу
                 String book = "Book " + (Library.books.size() + 1);
                 Library.books.add(book);
-                System.out.println(name + " написал " + book);
+                outputArea.append(name + " написал " + book + "\n"); // Выводим результат в JTextArea
             } finally {
                 Library.writeLock.unlock(); // Освобождаем блокировку после записи книги
             }
@@ -36,12 +41,13 @@ class Writer extends Thread {
 class Reader extends Thread {
     String name;
     List<String> booksRead = new ArrayList<>();
-
     int maxBooksToRead; // Число книг которые должен прочитать читатель
+    JTextArea outputArea;
 
-    public Reader(String name, int maxBooksToRead) {
+    public Reader(String name, int maxBooksToRead, JTextArea outputArea) {
         this.name = name;
         this.maxBooksToRead = maxBooksToRead;
+        this.outputArea = outputArea;
     }
 
     @Override
@@ -59,7 +65,7 @@ class Reader extends Thread {
                 if (booksReadCountLocal < maxBooksToRead && Library.books.size() > booksReadCountLocal) {
                     String book = Library.books.get(booksReadCountLocal);
                     booksRead.add(book);
-                    System.out.println(name + " читает: " + book);
+                    outputArea.append(name + " читает: " + book + "\n"); // Выводим результат в JTextArea
                     booksReadCountLocal++;
                 }
             } finally {
@@ -67,25 +73,71 @@ class Reader extends Thread {
             }
         }
         //если читатель закончил читать указанный лимит книг выводим результат
-        System.out.println(name + " прочитал: " + booksRead);
+        outputArea.append(name + " прочитал: " + booksRead + "\n"); // Выводим итог в JTextArea
     }
 }
 
 public class Main {
     public static void main(String[] args) {
-        int numWriters = 10; // 10 писателей
-        int numReaders = 12; // 12 читателей
-        int booksPerWriter = 3; // писатель 3 книги
-        int booksToReadPerReader = 30; // должен прочитать каждый читатель
+        // Создание интерфейса
+        JFrame frame = new JFrame("Library Simulation");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(400, 400);
+        frame.setLayout(new BorderLayout());
 
-        // Запуск писателей
-        for (int i = 1; i <= numWriters; i++) {
-            new Writer("Writer " + i, booksPerWriter).start();
-        }
+        // Панель для управления
+        JPanel controlPanel = new JPanel();
+        controlPanel.setLayout(new GridLayout(4, 2));
 
-        // Запуск читателей
-        for (int i = 1; i <= numReaders; i++) {
-            new Reader("Reader " + i, booksToReadPerReader).start();
-        }
+        JLabel writerLabel = new JLabel("Писателей:");
+        JTextField writerField = new JTextField("5", 3);
+        controlPanel.add(writerLabel);
+        controlPanel.add(writerField);
+
+        JLabel readerLabel = new JLabel("Читателей:");
+        JTextField readerField = new JTextField("5", 3);
+        controlPanel.add(readerLabel);
+        controlPanel.add(readerField);
+
+        JLabel readerLabel1 = new JLabel("Книги:");
+        JTextField readerField1 = new JTextField("5", 3);
+        controlPanel.add(readerLabel1);
+        controlPanel.add(readerField1);
+
+        JButton startButton = new JButton("Запуск");
+        controlPanel.add(startButton);
+
+        // Панель для отображения вывода
+        JTextArea outputArea = new JTextArea();
+        outputArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(outputArea);
+        frame.add(scrollPane, BorderLayout.CENTER);
+        frame.add(controlPanel, BorderLayout.SOUTH);
+
+        // Обработчик нажатия кнопки
+        startButton.addActionListener(e -> {
+            try {
+                int numWriters = Integer.parseInt(writerField.getText());
+                int numReaders = Integer.parseInt(readerField.getText());
+                int booksPerWriter = Integer.parseInt(readerField1.getText());
+                int booksToReadPerReader = Integer.parseInt(readerField1.getText());
+
+                outputArea.append("Запуск симуляции...\n");
+
+                // Запуск писателей
+                for (int i = 1; i <= numWriters; i++) {
+                    new Writer("Writer " + i, booksPerWriter, outputArea).start();
+                }
+
+                // Запуск читателей
+                for (int i = 1; i <= numReaders; i++) {
+                    new Reader("Reader " + i, booksToReadPerReader, outputArea).start();
+                }
+            } catch (NumberFormatException ex) {
+                outputArea.append("Ошибка ввода данных!\n");
+            }
+        });
+
+        frame.setVisible(true);
     }
 }
