@@ -1,194 +1,91 @@
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.time.LocalTime;
-import java.util.Random;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.Date;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.*;
 
-public class Main {
-    public static void main(String[] args) {
+class Library {
+    static List<String> books = new ArrayList<>();
+    static final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true); // true - приоритет читателей
+    static final Lock writeLock = lock.writeLock();
+    static final Lock readLock = lock.readLock();
+}
 
-        SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("лабораторная 1");
-            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.setSize(500, 400);
+class Writer extends Thread {
+    String name;
+    int booksToWrite;
 
-            Balls ballsPanel = new Balls();
-            frame.add(ballsPanel);
+    public Writer(String name, int booksToWrite) {
+        this.name = name;
+        this.booksToWrite = booksToWrite;
+    }
 
-
-
-
-
-
-            frame.addKeyListener(new KeyAdapter() {
-                @Override
-                public void keyPressed(KeyEvent e) {
-                    switch (e.getKeyCode()) {
-                        case KeyEvent.VK_LEFT:
-                            if (ballsPanel.getSelectedBall() == 0) {
-                                ballsPanel.incrementScore(5);
-
-                            }ballsPanel.selectBall(4);
-                            break;
-                        case KeyEvent.VK_RIGHT:
-                            if (ballsPanel.getSelectedBall() == 1) {
-                                ballsPanel.incrementScore(5);
-
-                            }ballsPanel.selectBall(4);
-                            break;
-                        case KeyEvent.VK_UP:
-                            if (ballsPanel.getSelectedBall() == 2) {
-                                ballsPanel.incrementScore(5);
-
-                            }ballsPanel.selectBall(4);
-                            break;
-                        case KeyEvent.VK_DOWN:
-                            if (ballsPanel.getSelectedBall() == 3) {
-                                ballsPanel.incrementScore(5);
-
-                            }
-                            ballsPanel.selectBall(4);
-
-
-                            break;
-                        case KeyEvent.VK_SPACE: //Сброс очков нажатием на пробел
-                            ballsPanel.resetScore();
-                            break;
-                    }
-                }
-            });
-
-            Timer timer = new Timer(true);
-            timer.scheduleAtFixedRate(new TimerTask() {
-                @Override
-                public void run() {
-                    ballsPanel.selectBall(new Random().nextInt(4));
-
-                }
-            }, 0, 1000);
-
-            frame.setFocusable(true);
-            frame.setVisible(true);
-        });
+    @Override
+    public void run() {
+        for (int i = 0; i < booksToWrite; i++) {
+            try {
+                Library.writeLock.lock(); // Писатель блокирует writeLock чтобы записывать книгу
+                String book = "Book " + (Library.books.size() + 1);
+                Library.books.add(book);
+                System.out.println(name + " написал " + book);
+            } finally {
+                Library.writeLock.unlock(); // Освобождаем блокировку после записи книги
+            }
+        }
     }
 }
 
-class Balls extends JPanel {
-    private int selectedBall = -1;
-    private int score = 0;
-    private boolean gameOver = false;
-    private TimerTask task;
-    public Balls(){
-        globalStopTimer();
+class Reader extends Thread {
+    String name;
+    List<String> booksRead = new ArrayList<>();
+
+    int maxBooksToRead; // Число книг которые должен прочитать читатель
+
+    public Reader(String name, int maxBooksToRead) {
+        this.name = name;
+        this.maxBooksToRead = maxBooksToRead;
     }
+
     @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        drawBalls(g);
-        drawScore(g);
-    }
+    public void run() {
+        int booksReadCountLocal = 0;
+        while (booksReadCountLocal < maxBooksToRead) { // теперь читатель будет читать указанное количество книг
+            try {
+                Library.readLock.lock(); // Читатель блокирует readLock для чтения
 
-    private void drawBalls(Graphics g) {
-        int cordX = getWidth() / 2;
-        int cordY = getHeight() / 2;
-        int diam = 70;
-        int razn = 80;
+                while (Library.books.size() <= booksReadCountLocal) {
+                    Library.readLock.unlock(); //книг нет, дать другим шанс
+                    Library.readLock.lock(); //когда они закончат снова захватить
+                }
 
-
-        int[][] positions = {
-                {cordX - razn, cordY},    // Лево
-                {cordX + razn, cordY},    // право
-                {cordX, cordY - razn},    // вверх
-                {cordX, cordY + razn}     // Низ
-        };
-
-        for (int i = 0; i < positions.length; i++) {
-            if (i == selectedBall) {
-                g.setColor(Color.RED);
-            } else {
-                g.setColor(Color.BLUE);
+                if (booksReadCountLocal < maxBooksToRead && Library.books.size() > booksReadCountLocal) {
+                    String book = Library.books.get(booksReadCountLocal);
+                    booksRead.add(book);
+                    System.out.println(name + " читает: " + book);
+                    booksReadCountLocal++;
+                }
+            } finally {
+                Library.readLock.unlock(); // прочитали
             }
-            if(!gameOver) {
-                g.fillOval(positions[i][0] - diam / 2, positions[i][1] - diam / 2, diam, diam);
-            } else{
-                g.setColor(Color.BLACK);
-                g.setFont(new Font("Arial", Font.BOLD, 36));
-                g.drawString("Время вышло" , 20, getHeight()/2);
-            }
-
         }
+        //если читатель закончил читать указанный лимит книг выводим результат
+        System.out.println(name + " прочитал: " + booksRead);
     }
+}
 
-    private void drawScore(Graphics g) {
-        g.setColor(Color.BLACK);
-        g.setFont(new Font("Arial", Font.BOLD, 16));
-        g.drawString("Счёт: " + score, getWidth() - 80, 20);
-    }
+public class Main {
+    public static void main(String[] args) {
+        int numWriters = 10; // 10 писателей
+        int numReaders = 12; // 12 читателей
+        int booksPerWriter = 3; // писатель 3 книги
+        int booksToReadPerReader = 30; // должен прочитать каждый читатель
 
-    public void selectBall(int index) {
-
-            selectedBall = index;
-            repaint();
-
-
-
-    }
-
-    public int getSelectedBall() {
-        return selectedBall;
-    }
-
-    public void incrementScore(int amount) {
-        score += amount;
-        resetScoreTimer();
-        repaint();
-    }
-
-    public void resetScore() {
-        score = 0;
-        repaint();
-    }
-    private void globalStopTimer() {
-
-        Date date = new Date();
-        int delayGameOver= 5 * 60 * 1000;
-        date.setTime(date.getTime()+delayGameOver);
-
-
-
-        Timer timer = new Timer();
-        timer.schedule(new TimerTask() {
-                           @Override
-                           public void run() {
-                               LocalTime endTime = LocalTime.now(); // Фиксируем время окончания
-                               System.out.println("Игра окончена в: " + endTime); // Выводим время окончания
-                               gameOver=true;
-                               timer.purge();
-                               repaint();
-
-                           }
-                       },
-                date);
-    }
-    public void resetScoreTimer(){
-        if (task != null) {
-            task.cancel();
-
+        // Запуск писателей
+        for (int i = 1; i <= numWriters; i++) {
+            new Writer("Writer " + i, booksPerWriter).start();
         }
 
-        Timer timer = new Timer(true);
-        task=new TimerTask() {
-            @Override
-            public void run() {
-                resetScore();
-                timer.purge();
-            }
-        };
-
-        timer.schedule(task, 3000);
+        // Запуск читателей
+        for (int i = 1; i <= numReaders; i++) {
+            new Reader("Reader " + i, booksToReadPerReader).start();
+        }
     }
 }
