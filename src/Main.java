@@ -1,3 +1,6 @@
+import javax.swing.*;
+import java.awt.*;
+import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.*;
@@ -68,16 +71,39 @@ class Reader extends Thread {
         }
         //если читатель закончил читать указанный лимит книг выводим результат
         System.out.println(name + " прочитал: " + booksRead);
+        WindowPrint.updateTextArea(name, booksRead);
     }
 }
+class WindowPrint {
+    static JTextArea textArea = new JTextArea();
 
+    public static void initializeGUI() {
+        JFrame frame = new JFrame("Прочитанные книги");
+        frame.setSize(400, 400);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        textArea.setEditable(false);
+        frame.add(new JScrollPane(textArea), BorderLayout.CENTER);
+        frame.setVisible(true);
+    }
+
+    public static synchronized void updateTextArea(String readerName, List<String> booksRead) {
+        SwingUtilities.invokeLater(() -> {
+            textArea.append(readerName + " прочитал:\n");
+            for (String book : booksRead) {
+                textArea.append(book + "\n");
+            }
+            textArea.append("\n");
+        });
+    }
+}
 public class Main {
     public static void main(String[] args) {
         int numWriters = 10; // 10 писателей
         int numReaders = 12; // 12 читателей
         int booksPerWriter = 3; // писатель 3 книги
         int booksToReadPerReader = 30; // должен прочитать каждый читатель
-
+        WindowPrint.initializeGUI();
         // Запуск писателей
         for (int i = 1; i <= numWriters; i++) {
             new Writer("Writer " + i, booksPerWriter).start();
