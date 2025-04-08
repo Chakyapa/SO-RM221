@@ -2,14 +2,11 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.Semaphore;
 
 class Library {
     static List<String> books = new ArrayList<>();
-    static final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true); // приоритет читателей
-    static final Lock writeLock = lock.writeLock();
-    static final Lock readLock = lock.readLock();
+    static final Semaphore mutex = new Semaphore(1); // Семафор для писателей
 }
 
 class Writer extends Thread {
@@ -27,12 +24,15 @@ class Writer extends Thread {
     public void run() {
         for (int i = 0; i < booksToWrite; i++) {
             try {
-                Library.writeLock.lock();
+                Library.mutex.acquire(); // Захват семафора для записи
                 String book = "Book " + (Library.books.size() + 1);
                 Library.books.add(book);
-                SwingUtilities.invokeLater(() -> outputArea.append(name + " написал " + book + "\n"));
+                SwingUtilities.invokeLater(() -> outputArea.append(name + " написал: " + book + "\n"));
+                Thread.sleep(500); // Имитация времени написания книги
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             } finally {
-                Library.writeLock.unlock();
+                Library.mutex.release(); // Освобождение семафора
             }
         }
     }
@@ -40,8 +40,8 @@ class Writer extends Thread {
 
 class Reader extends Thread {
     String name;
-    List<String> booksRead = new ArrayList<>();
     int maxBooksToRead;
+    List<String> booksRead = new ArrayList<>();
     JTextArea outputArea;
 
     public Reader(String name, int maxBooksToRead, JTextArea outputArea) {
@@ -52,27 +52,32 @@ class Reader extends Thread {
 
     @Override
     public void run() {
-        int booksReadCountLocal = 0;
-        while (booksReadCountLocal < maxBooksToRead) {
-            try {
-                Library.readLock.lock();
-                while (Library.books.size() <= booksReadCountLocal) {
-                    Library.readLock.unlock();
-                    Library.readLock.lock();
+        int localRead = 0;
+        while (localRead < maxBooksToRead) {
+            if (Library.books.size() > localRead) {
+                String book = Library.books.get(localRead);
+                booksRead.add(book);
+                SwingUtilities.invokeLater(() -> outputArea.append(name + " читает: " + book + "\n"));
+                localRead++;
+                try {
+                    Thread.sleep(300); // Имитация времени чтения
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
-                if (booksReadCountLocal < maxBooksToRead && Library.books.size() > booksReadCountLocal) {
-                    String book = Library.books.get(booksReadCountLocal);
-                    booksRead.add(book);
-                    booksReadCountLocal++;
-                    SwingUtilities.invokeLater(() -> outputArea.append(name + " читает: " + book + "\n"));
+            } else {
+                try {
+                    Thread.sleep(200); // Ждём, пока появится новая книга
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
-            } finally {
-                Library.readLock.unlock();
             }
         }
+
         SwingUtilities.invokeLater(() -> outputArea.append(name + " прочитал: " + booksRead + "\n"));
     }
 }
+
+
 
 public class Main {
     public static void main(String[] args) {
