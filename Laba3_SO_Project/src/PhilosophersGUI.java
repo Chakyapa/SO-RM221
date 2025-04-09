@@ -1,14 +1,14 @@
 import javax.swing.*;
 import java.awt.*;
 
-class PhilosophersGUI extends JFrame {
+public class PhilosophersGUI extends JFrame {
     private final JLabel[] philosopherLabels;
 
     public PhilosophersGUI(int n) {
         setTitle("Dining Philosophers");
         setSize(600, 700);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(null); // Используем абсолютное позиционирование
+        setLayout(null);
 
         philosopherLabels = new JLabel[n];
         int centerX = 300, centerY = 300, radius = 200;
