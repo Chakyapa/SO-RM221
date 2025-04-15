@@ -106,12 +106,14 @@ public class Main {
         final int N = 19; // Количество философов
         final int eatCount = 15;
 
+        // Создаём "справедливые" семафоры для вилок
         Semaphore[] forks = new Semaphore[N];
         for (int i = 0; i < N; i++) {
-            forks[i] = new Semaphore(1);
+            forks[i] = new Semaphore(1, true); // fair = true
         }
 
-        Semaphore room = new Semaphore(N - 1);
+        // Справедливый семафор для ограничения количества философов за столом
+        Semaphore room = new Semaphore(N - 1, true); // fair = true
 
         JFrame frame = new JFrame("Проблема философов");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
