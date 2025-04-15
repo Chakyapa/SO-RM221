@@ -1,134 +1,129 @@
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.Semaphore;
 
-class Library {
-    static List<String> books = new ArrayList<>();
-    static final Semaphore mutex = new Semaphore(1); // Семафор для писателей
-}
+public class Main {
 
-class Writer extends Thread {
-    String name;
-    int booksToWrite;
-    JTextArea outputArea;
+    static class Philosopher extends Thread {
+        private final int id;
+        private final Semaphore leftFork;
+        private final Semaphore rightFork;
+        private final Semaphore room;
+        private final int eatCount;
+        private final PhilosopherPanel panel;
 
-    public Writer(String name, int booksToWrite, JTextArea outputArea) {
-        this.name = name;
-        this.booksToWrite = booksToWrite;
-        this.outputArea = outputArea;
-    }
+        public Philosopher(int id, Semaphore leftFork, Semaphore rightFork, Semaphore room, int eatCount, PhilosopherPanel panel) {
+            this.id = id;
+            this.leftFork = leftFork;
+            this.rightFork = rightFork;
+            this.room = room;
+            this.eatCount = eatCount;
+            this.panel = panel;
+        }
 
-    @Override
-    public void run() {
-        for (int i = 0; i < booksToWrite; i++) {
+        @Override
+        public void run() {
             try {
-                Library.mutex.acquire(); // Захват семафора для записи
-                String book = "Book " + (Library.books.size() + 1);
-                Library.books.add(book);
-                SwingUtilities.invokeLater(() -> outputArea.append(name + " написал: " + book + "\n"));
-                Thread.sleep(500); // Имитация времени написания книги
+                for (int i = 0; i < eatCount; i++) {
+                    room.acquire();
+
+                    leftFork.acquire();
+                    panel.updateForkStatus("Взял левую вилку", Color.ORANGE, true);
+
+                    rightFork.acquire();
+                    panel.updateForkStatus("Взял правую вилку", Color.PINK, false);
+
+                    eat();
+
+                    leftFork.release();
+                    rightFork.release();
+                    panel.updateForkStatus("Положил обе вилки", Color.GRAY, true);
+                    panel.updateForkStatus("Положил обе вилки", Color.GRAY, false);
+
+                    room.release();
+
+                    think();
+                }
+                panel.updateStatus("Закончил ужинать", Color.BLACK);
             } catch (InterruptedException e) {
                 e.printStackTrace();
-            } finally {
-                Library.mutex.release(); // Освобождение семафора
-            }
-        }
-    }
-}
-
-class Reader extends Thread {
-    String name;
-    int maxBooksToRead;
-    List<String> booksRead = new ArrayList<>();
-    JTextArea outputArea;
-
-    public Reader(String name, int maxBooksToRead, JTextArea outputArea) {
-        this.name = name;
-        this.maxBooksToRead = maxBooksToRead;
-        this.outputArea = outputArea;
-    }
-
-    @Override
-    public void run() {
-        int localRead = 0;
-        while (localRead < maxBooksToRead) {
-            if (Library.books.size() > localRead) {
-                String book = Library.books.get(localRead);
-                booksRead.add(book);
-                SwingUtilities.invokeLater(() -> outputArea.append(name + " читает: " + book + "\n"));
-                localRead++;
-                try {
-                    Thread.sleep(300); // Имитация времени чтения
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                try {
-                    Thread.sleep(200); // Ждём, пока появится новая книга
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
             }
         }
 
-        SwingUtilities.invokeLater(() -> outputArea.append(name + " прочитал: " + booksRead + "\n"));
+        private void think() throws InterruptedException {
+            panel.updateStatus("Размышляет...", Color.BLUE);
+            Thread.sleep((int) (Math.random() * 1000));
+        }
+
+        private void eat() throws InterruptedException {
+            panel.updateStatus("Ест...", Color.GREEN);
+            Thread.sleep((int) (Math.random() * 1000));
+        }
     }
-}
 
+    static class PhilosopherPanel extends JPanel {
+        private final JLabel statusLabel;
+        private final JLabel leftForkLabel;
+        private final JLabel rightForkLabel;
 
+        public PhilosopherPanel(int id) {
+            setLayout(new BorderLayout());
+            setBorder(BorderFactory.createTitledBorder("Философ " + id));
 
-public class Main {
+            statusLabel = new JLabel("Ждёт начала...", SwingConstants.CENTER);
+            leftForkLabel = new JLabel("Левая вилка", SwingConstants.CENTER);
+            rightForkLabel = new JLabel("Правая вилка", SwingConstants.CENTER);
+
+            JPanel forkPanel = new JPanel(new GridLayout(1, 2));
+            forkPanel.add(leftForkLabel);
+            forkPanel.add(rightForkLabel);
+
+            add(statusLabel, BorderLayout.CENTER);
+            add(forkPanel, BorderLayout.SOUTH);
+        }
+
+        public void updateStatus(String status, Color color) {
+            SwingUtilities.invokeLater(() -> {
+                statusLabel.setText(status);
+                statusLabel.setForeground(color);
+            });
+        }
+
+        public void updateForkStatus(String status, Color color, boolean isLeft) {
+            SwingUtilities.invokeLater(() -> {
+                if (isLeft) {
+                    leftForkLabel.setText(status);
+                    leftForkLabel.setForeground(color);
+                } else {
+                    rightForkLabel.setText(status);
+                    rightForkLabel.setForeground(color);
+                }
+            });
+        }
+    }
+
     public static void main(String[] args) {
-        JFrame frame = new JFrame("Library Simulation");
+        final int N = 19; // Количество философов
+        final int eatCount = 15;
+
+        Semaphore[] forks = new Semaphore[N];
+        for (int i = 0; i < N; i++) {
+            forks[i] = new Semaphore(1);
+        }
+
+        Semaphore room = new Semaphore(N - 1);
+
+        JFrame frame = new JFrame("Проблема философов");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(600, 500);
-        frame.setLayout(new BorderLayout());
+        frame.setLayout(new GridLayout(N, 1));
 
-        JPanel controlPanel = new JPanel(new GridLayout(4, 2));
-        JLabel writerLabel = new JLabel("Писателей:");
-        JTextField writerField = new JTextField("10", 3);
-        controlPanel.add(writerLabel);
-        controlPanel.add(writerField);
+        for (int i = 0; i < N; i++) {
+            PhilosopherPanel panel = new PhilosopherPanel(i);
+            frame.add(panel);
+            new Philosopher(i, forks[i], forks[(i + 1) % N], room, eatCount, panel).start();
+        }
 
-        JLabel readerLabel = new JLabel("Читателей:");
-        JTextField readerField = new JTextField("12", 3);
-        controlPanel.add(readerLabel);
-        controlPanel.add(readerField);
-
-        JLabel bookLabel = new JLabel("Книг на писателя:");
-        JTextField bookField = new JTextField("3", 3);
-        controlPanel.add(bookLabel);
-        controlPanel.add(bookField);
-
-        JButton startButton = new JButton("Запуск");
-        controlPanel.add(startButton);
-
-        JTextArea outputArea = new JTextArea();
-        outputArea.setEditable(false);
-        JScrollPane scrollPane = new JScrollPane(outputArea);
-        frame.add(scrollPane, BorderLayout.CENTER);
-        frame.add(controlPanel, BorderLayout.SOUTH);
-
-        startButton.addActionListener(e -> {
-            outputArea.setText("");
-            int numWriters = Integer.parseInt(writerField.getText());
-            int numReaders = Integer.parseInt(readerField.getText());
-            int booksPerWriter = Integer.parseInt(bookField.getText());
-            int booksToReadPerReader = 30;
-
-            outputArea.append("Запуск симуляции...\n");
-
-            for (int i = 1; i <= numWriters; i++) {
-                new Writer("Writer " + i, booksPerWriter, outputArea).start();
-            }
-
-            for (int i = 1; i <= numReaders; i++) {
-                new Reader("Reader " + i, booksToReadPerReader, outputArea).start();
-            }
-        });
-
+        frame.setSize(500, 600);
         frame.setVisible(true);
     }
 }
