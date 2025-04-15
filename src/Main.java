@@ -112,20 +112,28 @@ public class Main {
             forks[i] = new Semaphore(1, true); // fair = true
         }
 
-        // Справедливый семафор для ограничения количества философов за столом
-        Semaphore room = new Semaphore(N - 1, true); // fair = true
+
+        Semaphore room = new Semaphore(N - 1, true);
 
         JFrame frame = new JFrame("Проблема философов");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setLayout(new GridLayout(N, 1));
+
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new GridLayout(N, 1));
 
         for (int i = 0; i < N; i++) {
             PhilosopherPanel panel = new PhilosopherPanel(i);
-            frame.add(panel);
+            contentPanel.add(panel);
             new Philosopher(i, forks[i], forks[(i + 1) % N], room, eatCount, panel).start();
         }
 
-        frame.setSize(500, 600);
+
+        JScrollPane scrollPane = new JScrollPane(contentPanel);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+
+
+        frame.getContentPane().add(scrollPane);
+        frame.setSize(500, 500);
         frame.setVisible(true);
     }
 }
