@@ -5,27 +5,28 @@ import java.util.concurrent.Semaphore;
 public class Main {
 
     static class Philosopher extends Thread {
-        private final int id;
-        private final Semaphore leftFork;
-        private final Semaphore rightFork;
-        private final Semaphore room;
-        private final int eatCount;
-        private final PhilosopherPanel panel;
+        int id;
+        Semaphore leftFork;
+        Semaphore rightFork;
+        Semaphore table;
+        int eatCount;
+        PhilosopherPanel panel;
 
         public Philosopher(int id, Semaphore leftFork, Semaphore rightFork, Semaphore room, int eatCount, PhilosopherPanel panel) {
             this.id = id;
             this.leftFork = leftFork;
             this.rightFork = rightFork;
-            this.room = room;
+            this.table = room;
             this.eatCount = eatCount;
             this.panel = panel;
+
         }
 
         @Override
         public void run() {
             try {
                 for (int i = 0; i < eatCount; i++) {
-                    room.acquire();
+                    table.acquire();
 
                     leftFork.acquire();
                     panel.updateForkStatus("Взял левую вилку", Color.ORANGE, true);
@@ -40,7 +41,7 @@ public class Main {
                     panel.updateForkStatus("Положил обе вилки", Color.GRAY, true);
                     panel.updateForkStatus("Положил обе вилки", Color.GRAY, false);
 
-                    room.release();
+                    table.release();
 
                     think();
                 }
@@ -112,8 +113,8 @@ public class Main {
             forks[i] = new Semaphore(1, true); // fair = true
         }
 
-
-        Semaphore room = new Semaphore(N - 1, true);
+        // Справедливый семафор для ограничения количества философов за столом
+        Semaphore room = new Semaphore(N - 1, true); // fair = true
 
         JFrame frame = new JFrame("Проблема философов");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
