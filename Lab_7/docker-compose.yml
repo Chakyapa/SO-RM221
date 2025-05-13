@@ -1,0 +1,26 @@
+
+services:
+  barbershop_service:
+    image: lab_7
+    build: .
+    environment:
+      - SERVICE_TYPE=barbershop_service
+    ports:
+      - "8080:8080"
+    networks:
+      - barbershop_network
+
+  client_service:
+    image: lab_7
+    build: .
+    environment:
+      - SERVICE_TYPE=client_service
+      - BARBER_HOST=barbershop_service
+    depends_on:
+      - barbershop_service
+    networks:
+      - barbershop_network
+
+networks:
+  barbershop_network:
+    driver: bridge

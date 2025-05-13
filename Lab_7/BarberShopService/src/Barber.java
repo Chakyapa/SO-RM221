@@ -64,9 +64,8 @@ public class Barber extends Thread {
                 lock.unlock();
             }
 
-            // Эмулируем стрижку
             try {
-                Thread.sleep(2200);
+                Thread.sleep(10200);
             } catch (InterruptedException e) {
                 break;
             }
