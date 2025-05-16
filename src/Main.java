@@ -5,7 +5,7 @@ import java.util.concurrent.locks.*;
 
 class BarberShop {
     private final int waitingChairs;
-    final int barberChairs; // сделали package-private для проверки в main
+    final int barberChairs;
     final Queue<Client> waitingRoom;
     final Semaphore barberChairAccess;
     final List<Barber> barbers;
@@ -49,7 +49,7 @@ class BarberShop {
         }
     }
 
-    public Client getNextWaitingClientIfChairFree() {
+    public Client ifChariFree() {
         lock.lock();
         try {
             if (!waitingRoom.isEmpty() && barberChairAccess.tryAcquire()) {
@@ -61,7 +61,7 @@ class BarberShop {
         }
     }
 
-    public void releaseBarberChair(int barberId) {
+    public void BchairEmpty(int barberId) {
         barberChairAccess.release();
         System.out.println("Barber " + barberId + "'s chair is now free.");
     }
@@ -157,7 +157,7 @@ class Barber implements Runnable {
     private final int id;
     private final BarberShop shop;
     private final Lock lock = new ReentrantLock();
-    private final Condition wakeUpCondition = lock.newCondition();
+    private final Condition whenWakeUp = lock.newCondition();
     private boolean sleeping = true;
     private Client currentClient = null;
 
@@ -180,7 +180,7 @@ class Barber implements Runnable {
         try {
             this.currentClient = client;
             this.sleeping = false;
-            wakeUpCondition.signal();
+            whenWakeUp.signal();
         } finally {
             lock.unlock();
         }
@@ -194,7 +194,7 @@ class Barber implements Runnable {
                 while (currentClient == null && shop.isOpen()) {
                     System.out.println("Barber " + id + " is sleeping.");
                     sleeping = true;
-                    wakeUpCondition.await();
+                    whenWakeUp.await();
                 }
                 if (!shop.isOpen() && currentClient == null) {
                     System.out.println("Barber " + id + " is going home.");
@@ -208,14 +208,14 @@ class Barber implements Runnable {
 
             if (currentClient != null) {
                 cutHair(currentClient);
-                shop.releaseBarberChair(id);
+                shop.BchairEmpty(id);
             }
 
             while (true) {
-                currentClient = shop.getNextWaitingClientIfChairFree();
+                currentClient = shop.ifChariFree();
                 if (currentClient != null) {
                     cutHair(currentClient);
-                    shop.releaseBarberChair(id);
+                    shop.BchairEmpty(id);
                 } else {
                     break;
                 }

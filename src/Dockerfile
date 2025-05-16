@@ -11,4 +11,4 @@ COPY src/ /app/
 RUN javac *.java
 
 # Устанавливаем команду по умолчанию для запуска приложения
-CMD ["java", "BarberShop"]
+CMD ["java", "Main"]
