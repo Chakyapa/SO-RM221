@@ -1,0 +1,15 @@
+version: "3.8"
+
+
+services:
+  barber_service:
+    build: ./barber-service
+    ports:
+      - "8080:8080"
+    container_name: barber_service
+
+  client_generator:
+    build: ./client-generator
+    container_name: client_generator
+    depends_on:
+      - barber_service

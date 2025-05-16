@@ -2,25 +2,31 @@ package com.example.lab3;
 
 import javafx.application.Platform;
 
+import java.util.Random;
+
 public class Philosopher implements Runnable {
-    private Object leftFork;//левая вилка
-    private Object rightFork;//правая вилка
-    private int maxEatingTime;//максимальное время еды
-    private int eatingCount;//колличество еды
-    private final HelloController controller;//для графического интерфейса
-//инициализация
+    private Object leftFork;
+    private Object rightFork;
+    private int maxEatingTime;
+    private int eatingCount;
+    private final HelloController controller;
+    private final String[] thoughts; // Массив мыслей
+    private final Random random;
+
     public Philosopher(Object leftFork, Object rightFork, int maxEatingTime, HelloController controller) {
         this.leftFork = leftFork;
         this.rightFork = rightFork;
         this.maxEatingTime = maxEatingTime;
         this.controller = controller;
+        this.thoughts = new String[] {"about life", "about death", "about universe", "about life meaning"};
+        this.random = new Random();
     }
 
     @Override
     public void run() {
         try {
-            while (eatingCount < maxEatingTime) {//пока количество еды не достигло макс времени
-                doAction(": Thinking");
+            while (eatingCount < maxEatingTime) {
+                doAction(": Thinking " + thoughts[random.nextInt(thoughts.length)]);
                 synchronized (leftFork) {
                     doAction(": Picked up left fork");
                     synchronized (rightFork) {
