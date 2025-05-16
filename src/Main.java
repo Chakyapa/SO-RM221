@@ -1,144 +1,246 @@
-import javax.swing.*;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import java.util.concurrent.*;
 import java.util.*;
-import java.awt.BorderLayout;
-import java.awt.GridLayout;
+import java.util.concurrent.locks.*;
+
+class BarberShop {
+    private final int waitingChairs;
+    final int barberChairs; // сделали package-private для проверки в main
+    final Queue<Client> waitingRoom;
+    final Semaphore barberChairAccess;
+    final List<Barber> barbers;
+    final Lock lock = new ReentrantLock();
+    final Condition clientAvailable = lock.newCondition();
+
+    private volatile boolean shopOpen = true;
+
+    public BarberShop(int numBarbers, int barberChairs, int waitingChairs) {
+        this.waitingChairs = waitingChairs;
+        this.barberChairs = barberChairs;
+        this.waitingRoom = new ArrayDeque<>(waitingChairs);
+        this.barberChairAccess = new Semaphore(barberChairs);
+        this.barbers = new ArrayList<>();
+        for (int i = 0; i < numBarbers; i++) {
+            Barber barber = new Barber(i, this);
+            barbers.add(barber);
+            new Thread(barber).start();
+        }
+    }
+
+    public void clientArrives(Client client) {
+        lock.lock();
+        try {
+            for (Barber barber : barbers) {
+                if (barber.isSleeping() && barberChairAccess.tryAcquire()) {
+                    barber.wakeUp(client);
+                    return;
+                }
+            }
+
+            if (waitingRoom.size() < waitingChairs) {
+                waitingRoom.add(client);
+                System.out.println("Client " + client.getId() + " is waiting.");
+                clientAvailable.signalAll();
+            } else {
+                System.out.println("Client " + client.getId() + " left (no waiting space).");
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public Client getNextWaitingClientIfChairFree() {
+        lock.lock();
+        try {
+            if (!waitingRoom.isEmpty() && barberChairAccess.tryAcquire()) {
+                return waitingRoom.poll();
+            }
+            return null;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void releaseBarberChair(int barberId) {
+        barberChairAccess.release();
+        System.out.println("Barber " + barberId + "'s chair is now free.");
+    }
+
+    public void waitForClients() {
+        lock.lock();
+        try {
+            while (waitingRoom.isEmpty() && shopOpen) {
+                clientAvailable.await();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public boolean isOpen() {
+        return shopOpen;
+    }
+
+    public void closeShop() {
+        lock.lock();
+        try {
+            shopOpen = false;
+            clientAvailable.signalAll(); // разбудить барберов для завершения
+            for (Barber barber : barbers) {
+                barber.wakeUp(null); // Разбудить всех, если они спят
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        BarberShop shop = new BarberShop(3, 3, 5);
+
+        ExecutorService clients = Executors.newFixedThreadPool(20);
+        for (int i = 0; i < 20; i++) {
+            int clientId = i;
+            clients.execute(() -> {
+                try {
+                    Thread.sleep(new Random().nextInt(3000));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                shop.clientArrives(new Client(clientId));
+            });
+        }
+
+        clients.shutdown();
+        clients.awaitTermination(2, TimeUnit.MINUTES);
 
 
-class Library {
-    static List<String> books = new ArrayList<>();
-    static final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true); // true - приоритет читателей
-    static final Lock writeLock = lock.writeLock();
-    static final Lock readLock = lock.readLock();
+// Ждем, пока очередь опустеет и освободятся все кресла
+        while (true) {
+            Thread.sleep(500);
+            shop.lock.lock();
+            try {
+                boolean emptyQueue = shop.waitingRoom.isEmpty();
+                boolean allChairsFree = (shop.barberChairAccess.availablePermits() == shop.barberChairs);
+                if (emptyQueue && allChairsFree) {
+                    break;
+                }
+            } finally {
+                shop.lock.unlock();
+            }
+        }
+
+        // Закрываем магазин — барберы закончат работу
+        shop.closeShop();
+
+        // Немного подождём, чтобы барберы смогли завершить работу
+        Thread.sleep(2000);
+
+        System.out.println("Barber shop is closed. All clients served.");
+    }
 }
 
-class Writer extends Thread {
-    String name;
-    int booksToWrite;
-    JTextArea outputArea;
+class Client {
+    private final int id;
 
-    public Writer(String name, int booksToWrite, JTextArea outputArea) {
-        this.name = name;
-        this.booksToWrite = booksToWrite;
-        this.outputArea = outputArea;
+    public Client(int id) {
+        this.id = id;
+    }
+
+    public int getId() {
+        return id;
+    }
+}
+
+class Barber implements Runnable {
+    private final int id;
+    private final BarberShop shop;
+    private final Lock lock = new ReentrantLock();
+    private final Condition wakeUpCondition = lock.newCondition();
+    private boolean sleeping = true;
+    private Client currentClient = null;
+
+    public Barber(int id, BarberShop shop) {
+        this.id = id;
+        this.shop = shop;
+    }
+
+    public boolean isSleeping() {
+        lock.lock();
+        try {
+            return sleeping;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void wakeUp(Client client) {
+        lock.lock();
+        try {
+            this.currentClient = client;
+            this.sleeping = false;
+            wakeUpCondition.signal();
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
     public void run() {
-        for (int i = 0; i < booksToWrite; i++) {
+        while (true) {
+            lock.lock();
             try {
-                Library.writeLock.lock(); // Писатель блокирует writeLock чтобы записывать книгу
-                String book = "Book " + (Library.books.size() + 1);
-                Library.books.add(book);
-                outputArea.append(name + " написал " + book + "\n"); // Выводим результат в JTextArea
+                while (currentClient == null && shop.isOpen()) {
+                    System.out.println("Barber " + id + " is sleeping.");
+                    sleeping = true;
+                    wakeUpCondition.await();
+                }
+                if (!shop.isOpen() && currentClient == null) {
+                    System.out.println("Barber " + id + " is going home.");
+                    break;
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             } finally {
-                Library.writeLock.unlock(); // Освобождаем блокировку после записи книги
+                lock.unlock();
             }
+
+            if (currentClient != null) {
+                cutHair(currentClient);
+                shop.releaseBarberChair(id);
+            }
+
+            while (true) {
+                currentClient = shop.getNextWaitingClientIfChairFree();
+                if (currentClient != null) {
+                    cutHair(currentClient);
+                    shop.releaseBarberChair(id);
+                } else {
+                    break;
+                }
+            }
+
+            lock.lock();
+            try {
+                sleeping = true;
+                currentClient = null;
+                System.out.println("Barber " + id + " goes to sleep (no client/chair).");
+            } finally {
+                lock.unlock();
+            }
+
+            shop.waitForClients();
         }
     }
-}
 
-class Reader extends Thread {
-    String name;
-    List<String> booksRead = new ArrayList<>();
-    int maxBooksToRead; // Число книг которые должен прочитать читатель
-    JTextArea outputArea;
-
-    public Reader(String name, int maxBooksToRead, JTextArea outputArea) {
-        this.name = name;
-        this.maxBooksToRead = maxBooksToRead;
-        this.outputArea = outputArea;
-    }
-
-    @Override
-    public void run() {
-        int booksReadCountLocal = 0;
-        while (booksReadCountLocal < maxBooksToRead) { // теперь читатель будет читать указанное количество книг
-            try {
-                Library.readLock.lock(); // Читатель блокирует readLock для чтения
-
-                while (Library.books.size() <= booksReadCountLocal) {
-                    Library.readLock.unlock(); //книг нет, дать другим шанс
-                    Library.readLock.lock(); //когда они закончат снова захватить
-                }
-
-                if (booksReadCountLocal < maxBooksToRead && Library.books.size() > booksReadCountLocal) {
-                    String book = Library.books.get(booksReadCountLocal);
-                    booksRead.add(book);
-                    outputArea.append(name + " читает: " + book + "\n"); // Выводим результат в JTextArea
-                    booksReadCountLocal++;
-                }
-            } finally {
-                Library.readLock.unlock(); // прочитали
-            }
+    private void cutHair(Client client) {
+        System.out.println("Barber " + id + " is cutting hair of Client " + client.getId());
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
-        //если читатель закончил читать указанный лимит книг выводим результат
-        outputArea.append(name + " прочитал: " + booksRead + "\n"); // Выводим итог в JTextArea
-    }
-}
-
-public class Main {
-    public static void main(String[] args) {
-        // Создание интерфейса
-        JFrame frame = new JFrame("Library Simulation");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(400, 400);
-        frame.setLayout(new BorderLayout());
-
-        // Панель для управления
-        JPanel controlPanel = new JPanel();
-        controlPanel.setLayout(new GridLayout(4, 2));
-
-        JLabel writerLabel = new JLabel("Писателей:");
-        JTextField writerField = new JTextField("5", 3);
-        controlPanel.add(writerLabel);
-        controlPanel.add(writerField);
-
-        JLabel readerLabel = new JLabel("Читателей:");
-        JTextField readerField = new JTextField("5", 3);
-        controlPanel.add(readerLabel);
-        controlPanel.add(readerField);
-
-        JLabel readerLabel1 = new JLabel("Книги:");
-        JTextField readerField1 = new JTextField("5", 3);
-        controlPanel.add(readerLabel1);
-        controlPanel.add(readerField1);
-
-        JButton startButton = new JButton("Запуск");
-        controlPanel.add(startButton);
-
-        // Панель для отображения вывода
-        JTextArea outputArea = new JTextArea();
-        outputArea.setEditable(false);
-        JScrollPane scrollPane = new JScrollPane(outputArea);
-        frame.add(scrollPane, BorderLayout.CENTER);
-        frame.add(controlPanel, BorderLayout.SOUTH);
-
-        // Обработчик нажатия кнопки
-        startButton.addActionListener(e -> {
-            try {
-                int numWriters = Integer.parseInt(writerField.getText());
-                int numReaders = Integer.parseInt(readerField.getText());
-                int booksPerWriter = Integer.parseInt(readerField1.getText());
-                int booksToReadPerReader = Integer.parseInt(readerField1.getText());
-
-                outputArea.append("Запуск симуляции...\n");
-
-                // Запуск писателей
-                for (int i = 1; i <= numWriters; i++) {
-                    new Writer("Writer " + i, booksPerWriter, outputArea).start();
-                }
-
-                // Запуск читателей
-                for (int i = 1; i <= numReaders; i++) {
-                    new Reader("Reader " + i, booksToReadPerReader, outputArea).start();
-                }
-            } catch (NumberFormatException ex) {
-                outputArea.append("Ошибка ввода данных!\n");
-            }
-        });
-
-        frame.setVisible(true);
+        System.out.println("Barber " + id + " finished cutting Client " + client.getId());
     }
 }
